@@ -1,14 +1,13 @@
 # sbt
 # (may want to keep parts of 'project')
 bin/
-project/
+./project/project
 target/
 build/
 
 # eclipse
 build
 .classpath
-.project
 .settings
 .worksheet
 
@@ -30,7 +29,6 @@ build
 .bloop
 .metals
 *workspace
-*project
 
 #general
 *.class
