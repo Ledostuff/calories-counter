@@ -27,9 +27,10 @@ class ProductCaloriesService[F[_]: Sync](productService: ProductService[F],
         }
         engNamesRequests.sequence
       }
+      time <- OptionT.liftF(Sync[F].delay(Instant.now(Clock.systemDefaultZone)))
       _ <- {
         productService.update(foundProductInfo.copy(engNames = caloriesInfo.map(_.name),
-          lastUpdate = Instant.now(Clock.systemDefaultZone)))
+          lastUpdate = time))
       }
     } yield {
       caloriesInfo.headOption
