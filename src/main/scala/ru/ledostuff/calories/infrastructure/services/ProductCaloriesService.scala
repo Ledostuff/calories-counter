@@ -43,15 +43,15 @@ class ProductCaloriesService[F[_]: Sync](productService: ProductService[F],
     ).getOrElseF({
       val resultOrError: EitherT[F, ErrorResponse, ProductCaloriesInfo] = for {
 
+        _                     <- EitherT.liftF(log.info(s"search translation for name $name"))
         translatedProductInfo <- EitherT.fromOptionF[F, ErrorResponse, TranslatedProduct]({
-          (OptionT.liftF(log.info(s"search translation for name $name")) *>
-          translateService.translateProductName(name)).value
+          translateService.translateProductName(name).value
         }, TranslationNotFound)
 
-        savedProduct          <- EitherT.liftF[F, ErrorResponse, Product](productService.createProduct(Product(name, translatedProductInfo.translatedNames.toSeq)))
+        savedProduct          <- EitherT.liftF[F, ErrorResponse, Product](productService.createProduct(Product(name, translatedProductInfo.translatedNames.toList)))
 
         caloriesInfo          <- {
-          val engNamesRequests = savedProduct.engNames.toList.map { engName =>
+          val engNamesRequests = savedProduct.engNames.map { engName =>
             (EitherT.liftF[F, ErrorResponse, Unit](log.info(s"search calories for name $engName")) *>
               EitherT.fromOptionF[F, ErrorResponse, ProductCalories](productCaloriesService.getCaloriesByProductName(engName).value, ProductCaloriesNotFound)).value
           }
@@ -59,8 +59,8 @@ class ProductCaloriesService[F[_]: Sync](productService: ProductService[F],
         }
         time                  <- EitherT.liftF(Sync[F].delay(Instant.now(Clock.systemDefaultZone)))
 
+        _                     <- EitherT.liftF(log.info(s"save updated calories names ${caloriesInfo.mkString(",")}"))
         _                     <- {
-          EitherT.liftF[F, ErrorResponse, Unit](log.info(s"save updated calories names ${caloriesInfo.mkString(",")}")) *>
           EitherT.fromOptionF[F, ErrorResponse, Product](productService.update(savedProduct.copy(engNames = caloriesInfo.map(_.name),
             lastUpdate = time)).value, ProductCaloriesNotFound)
         }

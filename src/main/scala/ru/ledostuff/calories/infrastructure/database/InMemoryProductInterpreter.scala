@@ -22,7 +22,7 @@ class InMemoryProductInterpreter[F[_]: Applicative] extends ProductRepositoryAlg
     for {
       foundPet <- findByRusName(product.rusName)
     } yield {
-      foundPet.getOrElse{
+      foundPet.getOrElse {
         val id = randomIds.nextLong()
         val savingProduct = product.copy(id = id.some)
         storage.put(id, savingProduct)
