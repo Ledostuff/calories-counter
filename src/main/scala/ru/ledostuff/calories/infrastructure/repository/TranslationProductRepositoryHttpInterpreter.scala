@@ -2,37 +2,25 @@ package ru.ledostuff.calories.infrastructure.repository
 
 import cats.Monad
 import cats.data.OptionT
-import cats.syntax.applicative._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.option._
-
 import io.circe._
 import io.circe.generic.semiauto._
-
+import ru.ledostuff.calories.config.TranslateApiConfig
+import ru.ledostuff.calories.domain.translate.{TranslatedProduct, TranslationProductRepository}
+import ru.ledostuff.calories.infrastructure.logging.Log
+import ru.ledostuff.calories.infrastructure.repository.TranslatedProductRequestParameters._
+import ru.ledostuff.calories.infrastructure.repository.TranslationProductRepositoryHttpInterpreter._
 import sttp.client._
 import sttp.client.circe._
 import sttp.model._
 
-import ru.ledostuff.calories.config.TranslateApiConfig
-import ru.ledostuff.calories.domain.translate.{TranslatedProduct, TranslationProductRepository}
-import TranslatedProductRequestParameters._
-import TranslationProductRepositoryHttpInterpreter._
-
-class I18nTranslationProductRepositoryHttpInterpreter[F[_]: Monad](translateApiConfig: TranslateApiConfig) (
+class I18nTranslationProductRepositoryHttpInterpreter[F[_]: Monad](translateApiConfig: TranslateApiConfig,
+                                                                   log: Log[F])(
   implicit sttpBackend: SttpBackend[F, Nothing, NothingT]
 ) extends TranslationProductRepository[F] {
   private val i18nTranslationEndpoint = "https://i18ns.com/api/v1/search"
-
-  private def error(message: => String): F[Unit] = {
-    println(message).pure
-  }
-  private def info(message: => String): F[Unit] = {
-    println(message).pure
-  }
-  private def debug(message: => String): F[Unit] = {
-    println(message).pure
-  }
 
   override def translateProductName(productName: String): OptionT[F, TranslatedProduct] = {
     OptionT(
@@ -47,21 +35,21 @@ class I18nTranslationProductRepositoryHttpInterpreter[F[_]: Monad](translateApiC
         .flatMap(response =>
           response.body.fold({
             case HttpError(body) =>
-              error(s"HttpError($body)").as(None)
+              log.error(s"HttpError($body)").as(None)
             case DeserializationError(body, err) =>
-              error(s"DeserializationError($body, $err)").as(None)
+              log.error(s"DeserializationError($body, $err)").as(None)
 
           },
           {
             case Nil =>
-              debug(s"Translation for product $productName not found.").as(none)
+              log.debug(s"Translation for product $productName not found.").as(none)
             case translations =>
               val translationVariants = for {
                 tr <- translations
                 eachName <- tr.translations.get(DefaultTargetTranslatedLanguage).toList.flatten
               } yield  eachName
               val translatedProduct = TranslatedProduct(productName, translationVariants.toSet)
-              debug(s"found translation of product $productName").as(translatedProduct.some)
+              log.debug(s"found translation of product $productName").as(translatedProduct.some)
           })
         )
     )

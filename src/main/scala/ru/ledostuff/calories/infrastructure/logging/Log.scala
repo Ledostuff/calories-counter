@@ -1,16 +1,15 @@
 package ru.ledostuff.calories.infrastructure.logging
 
-import cats.Applicative
-import cats.syntax.applicative._
+import cats.effect.Sync
 
-class Log[F[_]: Applicative] {
+class Log[F[_] : Sync] {
   def error(message: => String): F[Unit] = {
-    println(s"ERROR - $message").pure
+    Sync[F].delay(println(s"ERROR - $message"))
   }
   def info(message: => String): F[Unit] = {
-    println(s"INFO - $message").pure
+    Sync[F].delay(println(s"INFO - $message"))
   }
   def debug(message: => String): F[Unit] = {
-    println(s"DEBUG - $message").pure
+    Sync[F].delay(println(s"DEBUG - $message"))
   }
 }
