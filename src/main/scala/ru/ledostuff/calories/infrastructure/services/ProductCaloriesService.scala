@@ -57,11 +57,12 @@ class ProductCaloriesService[F[_]: Sync](productService: ProductService[F],
           }
           EitherT.liftF(engNamesRequests.sequence.map(l => l.collect{case Right(e) => e})).ensure(ProductCaloriesNotFound)(_.nonEmpty)
         }
+        time                  <- EitherT.liftF(Sync[F].delay(Instant.now(Clock.systemDefaultZone)))
 
         _                     <- {
           EitherT.liftF[F, ErrorResponse, Unit](log.info(s"save updated calories names ${caloriesInfo.mkString(",")}")) *>
           EitherT.fromOptionF[F, ErrorResponse, Product](productService.update(savedProduct.copy(engNames = caloriesInfo.map(_.name),
-            lastUpdate = Instant.now(Clock.systemDefaultZone))).value, ProductCaloriesNotFound)
+            lastUpdate = time)).value, ProductCaloriesNotFound)
         }
       } yield {
         ProductCaloriesInfo(name, caloriesInfo.head.calories)
