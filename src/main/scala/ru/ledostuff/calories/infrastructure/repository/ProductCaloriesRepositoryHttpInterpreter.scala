@@ -16,7 +16,7 @@ class ProductCaloriesRepositoryHttpInterpreter[F[_]: Sync](caloriesApiConfig: Ca
   override def getCaloriesByProductName(name: String): OptionT[F, ProductCalories] = {
     val getFoodInfoFunction: Response[CompactFood] => OptionT[F, ProductCalories] = { response: Response[CompactFood] =>
       for {
-        eachFood <- OptionT(Sync[F].pure(response.getResults.asScala.find(_.getName.trim == name)))
+        eachFood <- OptionT.fromOption(response.getResults.asScala.find(_.getName.trim == name))
         serving <- OptionT(Sync[F].delay(foodService.getFood(eachFood.getId).getServings.asScala.headOption))
       } yield {
         ProductCalories(eachFood.getName, serving.getCalories)
