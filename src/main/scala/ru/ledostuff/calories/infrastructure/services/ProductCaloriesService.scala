@@ -55,7 +55,9 @@ class ProductCaloriesService[F[_]: Sync](productService: ProductService[F],
             (EitherT.liftF[F, ErrorResponse, Unit](log.info(s"search calories for name $engName")) *>
               EitherT.fromOptionF[F, ErrorResponse, ProductCalories](productCaloriesService.getCaloriesByProductName(engName).value, ProductCaloriesNotFound)).value
           }
-          EitherT.liftF(engNamesRequests.sequence.map(l => l.collect{case Right(e) => e})).ensure(ProductCaloriesNotFound)(_.nonEmpty)
+          EitherT.liftF({
+            engNamesRequests.traverse(e => e).map(_.collect({case Right(e) => e}))
+          }).ensure(ProductCaloriesNotFound)(_.nonEmpty)
         }
         time                  <- EitherT.liftF(Sync[F].delay(Instant.now(Clock.systemDefaultZone)))
 
