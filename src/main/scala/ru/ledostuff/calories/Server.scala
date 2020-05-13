@@ -1,12 +1,12 @@
 package ru.ledostuff.calories
 
 import cats.effect.{Blocker, ConcurrentEffect, ContextShift, ExitCode, IO, IOApp, Resource, Sync, Timer}
-import org.http4s.server.Router
 import org.http4s.implicits._
+import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import ru.ledostuff.calories.config.CaloriesConfigModule
 import ru.ledostuff.calories.domain.database.ProductService
-import ru.ledostuff.calories.infrastructure.database.{DatabaseModule, DobieProductInterpreter, InMemoryProductInterpreter}
+import ru.ledostuff.calories.infrastructure.database.{DatabaseModule, DobieProductInterpreter}
 import ru.ledostuff.calories.infrastructure.endpoints.ProductCaloriesEndpoints
 import ru.ledostuff.calories.infrastructure.logging.Log
 import ru.ledostuff.calories.infrastructure.repository.{I18nTranslationProductRepositoryHttpInterpreter, ProductCaloriesRepositoryHttpInterpreter}
@@ -22,11 +22,18 @@ object Server extends IOApp {
       config <- Blocker[F].evalMap(CaloriesConfigModule[F])
 
       tx <- DatabaseModule[F](config.db)
+      log = new Log[F]
 
       implicit0(
       httpBackend: SttpBackend[F, Nothing, WebSocketHandler]
       ) <- AsyncHttpClientCatsBackend.resource[F]()
-      translateRepository <- Resource.liftF(Sync[F].delay( new I18nTranslationProductRepositoryHttpInterpreter[F](config.translateApi)))
+      /* use Sync[F].delay if resource or variable is initialized with side effects:
+       1. Read file system
+       2. Initialize some pools
+       3. Some other variables
+       etc.
+      */
+      translateRepository = new I18nTranslationProductRepositoryHttpInterpreter[F](config.translateApi, log)
 
       productCaloriesRepository = new ProductCaloriesRepositoryHttpInterpreter[F](config.caloriesApi)
 
@@ -36,7 +43,7 @@ object Server extends IOApp {
       productCaloriesService = new ProductCaloriesService[F](productService,
         translateRepository,
         productCaloriesRepository,
-        new Log[F])
+        log)
 
       router = Router(
         "/product" -> ProductCaloriesEndpoints.endpoints[F](productCaloriesService)

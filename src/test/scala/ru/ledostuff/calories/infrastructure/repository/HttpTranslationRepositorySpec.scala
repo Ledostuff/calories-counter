@@ -7,6 +7,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.client.SttpBackend
 import sttp.client.asynchttpclient.WebSocketHandler
 import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import ru.ledostuff.calories.infrastructure.logging.Log
 
 
 class HttpTranslationRepositorySpec extends AnyFunSuite with Matchers {
@@ -15,7 +16,8 @@ class HttpTranslationRepositorySpec extends AnyFunSuite with Matchers {
     implicit0(
     httpBackend: SttpBackend[IO, Nothing, WebSocketHandler]
     ) <- AsyncHttpClientCatsBackend.resource[IO]()
-    translateRepository <- Resource.liftF(Sync[IO].delay( new I18nTranslationProductRepositoryHttpInterpreter[IO](caloriesAppConfig.translateApi)))
+    translateRepository <- Resource.liftF(Sync[IO].delay(new I18nTranslationProductRepositoryHttpInterpreter[IO](caloriesAppConfig.translateApi,
+      new Log[IO])))
   } yield translateRepository
 
   test("successfully found product translation over http") {
