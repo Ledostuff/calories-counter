@@ -14,8 +14,8 @@ import ru.ledostuff.calories.domain.database.{Product, ProductRepositoryAlgebra}
 private object ProductSQL {
 
   /* This is used to marshal our sets of strings */
-  implicit val SetStringMeta: Meta[Seq[String]] =
-    Meta[String].imap(_.split(',').toSeq)(_.mkString(","))
+  implicit val SetStringMeta: Meta[List[String]] =
+    Meta[String].imap(_.split(',').toList)(_.mkString(","))
 
   def insert(product: Product): Update0 = {
     sql"""

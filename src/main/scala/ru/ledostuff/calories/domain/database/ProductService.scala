@@ -16,7 +16,7 @@ class ProductService[F[_]](repo: ProductRepositoryAlgebra[F]) {
     OptionT(repo.update(product))
 
   def delete(id: Long)(implicit F: Functor[F]): F[Unit] =
-    repo.delete(id).as(())
+    repo.delete(id).void
 
   def findByName(name: String): OptionT[F, Product] =
     OptionT(repo.findByRusName(name))
